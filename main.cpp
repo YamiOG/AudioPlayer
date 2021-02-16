@@ -1,5 +1,9 @@
 #include <stdio.h> 
+#include <iostream>
 #include <string>
+#include <vector>
+#include <sstream> 
+#include <filesystem>
 #include <SDL.h>
 #include <stb_image.h>
 #include <stb_truetype.h>
@@ -8,6 +12,7 @@
 #include <miniaudio.h>
 
 using namespace std;
+namespace fs = std::filesystem;
 
 SDL_Window *window;
 SDL_Renderer* renderer;
@@ -31,6 +36,8 @@ int decoderCount = 4;
 string fileLocations[] = {"Running in the 90's.mp3", "Undertale - Papyrus Theme Song - Bonetrousle.mp3", "Giorno's Theme Hardbass (JoRo Remix).mp3", "Bonetrousle (EAR RAPE WARNING).mp3"};
 ma_decoder* maDecoders = (ma_decoder*)malloc(sizeof(ma_decoder) * decoderCount);
 bool* decoderEnd = (bool*)malloc(sizeof(bool) * decoderCount);
+
+vector<string> list;
 
 ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, ma_uint32 frameCount)
 {
@@ -78,6 +85,15 @@ void DataCallback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint
             }
         }
     (void)pInput;
+}
+
+int GetDirectories(string path, vector<string> &list){
+    if(fs::exists(fs::path(path))){
+        for (auto& p : fs::directory_iterator(path)){
+            list.push_back(p.path().filename().u8string());
+        }
+    }
+    return 0;
 }
 
 SDL_Texture *GetTextureFromFile(string location){
@@ -236,6 +252,8 @@ void RenderHandler(){
 
 int main(int argc, char *argv[]){
     Setup();
+
+
     while(running){
         EventHandler();
         RenderHandler();

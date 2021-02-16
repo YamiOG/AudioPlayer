@@ -3,6 +3,10 @@ add_subdirectory(extern)
 
 CMAKE_MINIMUM_REQUIRED(VERSION 3.7)
 
+set(CMAKE_CXX_STANDARD 17)
+
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 include_directories(extern/SDL2/include extern/MiniAudio extern/stb/include)
 
 project(AudioPlayer)
