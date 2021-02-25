@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 #include <sstream> 
-#include <filesystem>
 #include <SDL.h>
+#include <SDL_ttf.h>
 #include <stb_image.h>
 #include <stb_truetype.h>
 
@@ -12,7 +12,6 @@
 #include <miniaudio.h>
 
 using namespace std;
-namespace fs = std::filesystem;
 
 SDL_Window *window;
 SDL_Renderer* renderer;
@@ -27,7 +26,7 @@ string imageLocations[] = {"quit.png", "back.png", "pause.png", "play.png", "nex
 SDL_Texture *textures[7];
 
 bool running = true;
-bool pause = false;
+bool pPause = false;
 
 ma_device maDevice;
 ma_result maResult;
@@ -37,7 +36,7 @@ string fileLocations[] = {"Running in the 90's.mp3", "Undertale - Papyrus Theme 
 ma_decoder* maDecoders = (ma_decoder*)malloc(sizeof(ma_decoder) * decoderCount);
 bool* decoderEnd = (bool*)malloc(sizeof(bool) * decoderCount);
 
-vector<string> list;
+vector<string> aList;
 
 ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, ma_uint32 frameCount)
 {
@@ -76,7 +75,7 @@ ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, m
 
 void DataCallback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount){
     float* pOutputF32 = (float*)pOutput;
-        if(!pause){
+        if(!pPause){
             if (!decoderEnd[songSelect]) {
                 ma_uint64 framesRead  = ma_decoder_read_pcm_frames(&maDecoders[songSelect], pOutput, frameCount);
                 if (framesRead < frameCount) {
@@ -88,11 +87,6 @@ void DataCallback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint
 }
 
 int GetDirectories(string path, vector<string> &list){
-    if(fs::exists(fs::path(path))){
-        for (auto& p : fs::directory_iterator(path)){
-            list.push_back(p.path().filename().u8string());
-        }
-    }
     return 0;
 }
 
@@ -101,7 +95,7 @@ SDL_Texture *GetTextureFromFile(string location){
     int width, height, orig_format;
     unsigned char* data = stbi_load(location.c_str(), &width, &height, &orig_format, req_format); 
     if (data == NULL) {
-        printf("ERROR:stb_image Failed to load file");
+        printf("ERROR:stb_image Failed to load file %s\n", location.c_str());
         return nullptr;
     }
 
@@ -118,7 +112,7 @@ SDL_Texture *GetTextureFromFile(string location){
         return t;
     }
     else{
-        printf("ERROR:Failed to load file");
+        printf("ERROR:Failed to load file\n");
         return nullptr;
     }
     return nullptr;
@@ -127,6 +121,10 @@ SDL_Texture *GetTextureFromFile(string location){
 int Setup(){
     if(SDL_Init(SDL_INIT_EVERYTHING) != 0){
         return -1;
+    }
+
+    if(TTF_Init() != 0){
+	return -1;
     }
 
     window = SDL_CreateWindow("AudioPlayer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 192, 32, SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS);
@@ -141,7 +139,7 @@ int Setup(){
         maResult = ma_decoder_init_file(fileLocations[i].c_str(), &maDecoderConfig, &maDecoders[i]);
         maDecoders[i].pUserData = (void*)fileLocations[i].c_str(); 
         if(maResult != MA_SUCCESS){
-            printf("Failed to Load Audio File");
+            printf("Failed to Load Audio File\n");
             ma_decoder_uninit(&maDecoders[i]);
             return -1;
         }
@@ -156,12 +154,12 @@ int Setup(){
     maConfig.pUserData         = NULL;   // Can be accessed from the device object (device.pUserData).
 
     if (ma_device_init(NULL, &maConfig, &maDevice) != MA_SUCCESS) {
-        printf("Failed to Initialize Miniaudio Device");
+        printf("Failed to Initialize Miniaudio Device\n");
         return -1; 
     }
 
     if (ma_device_start(&maDevice) != MA_SUCCESS) {
-        printf("Failed to Start Miniaudio Device");
+        printf("Failed to Start Miniaudio Device\n");
         return -1;
     }
 
@@ -183,7 +181,7 @@ void EventHandler(){
                             SDL_SetTextureColorMod(textures[i], 100, 100, 100);
                         }
                         else if(i < 3){
-                            if(pause){
+                            if(pPause){
                                 SDL_SetTextureColorMod(textures[i+1], 100, 100, 100);
                             }
                             else{
@@ -206,7 +204,7 @@ void EventHandler(){
                                 ma_decoder_seek_to_pcm_frame(&maDecoders[songSelect], 0);
                                 break;
                             case 2:
-                                pause = !pause;
+                                pPause = !pPause;
                                 break;
                             case 3:
                                 songSelect++;
@@ -252,8 +250,7 @@ void RenderHandler(){
 
 int main(int argc, char *argv[]){
     Setup();
-
-
+    GetDirectories("../../", aList);
     while(running){
         EventHandler();
         RenderHandler();
