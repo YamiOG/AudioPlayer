@@ -17,6 +17,9 @@ SDL_Window *window;
 SDL_Renderer* renderer;
 SDL_Event ev;
 
+TTF_Font *font;
+SDL_Color textColor = {255, 255, 255, 255};
+
 SDL_Point mousePos = {0, 0};
 
 int songSelect = 0;
@@ -24,6 +27,8 @@ int songSelect = 0;
 SDL_Rect buttons[6] = {{0, 0, 32, 32}, {32, 0, 32, 32}, {64, 0, 32, 32}, {96, 0, 32, 32}, {128, 0, 32, 32}, {160, 0, 32, 32}};
 string imageLocations[] = {"quit.png", "back.png", "pause.png", "play.png", "next.png", "restart.png", "boost.png"};
 SDL_Texture *textures[7];
+
+string inputText;
 
 bool running = true;
 bool pPause = false;
@@ -90,6 +95,13 @@ int GetDirectories(string path, vector<string> &list){
     return 0;
 }
 
+TTF_Font *LoadFont(string font, int size){
+    if(font.empty() || size <= 0){
+	return nullptr;
+    }
+    return TTF_OpenFont(font.c_str(), size);
+}
+
 SDL_Texture *GetTextureFromFile(string location){
     int req_format = STBI_rgb_alpha;
     int width, height, orig_format;
@@ -118,6 +130,22 @@ SDL_Texture *GetTextureFromFile(string location){
     return nullptr;
 }
 
+SDL_Texture *CreateText(TTF_Font *font, string text, int &w, int &h, SDL_Color color){
+    if(text.empty()){
+	return nullptr;
+    }
+    SDL_Surface *surface = TTF_RenderText_Solid(font, text.c_str(), color);
+    if(surface == nullptr){
+        printf("ERROR:Surface is null\n");
+	return nullptr; 
+    }
+
+    w = surface->w;
+    h = surface->h;
+
+    return SDL_CreateTextureFromSurface(renderer, surface);
+}
+
 int Setup(){
     if(SDL_Init(SDL_INIT_EVERYTHING) != 0){
         return -1;
@@ -127,9 +155,10 @@ int Setup(){
 	return -1;
     }
 
-    window = SDL_CreateWindow("AudioPlayer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 192, 32, SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS);
+    window = SDL_CreateWindow("AudioPlayer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 192, 96, SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS);
     renderer = SDL_CreateRenderer(window, -1, 0);
 
+    font = LoadFont("font/Squarewave.ttf", 26);
     for(int i = 0; i < 7; i++){
         textures[i] = GetTextureFromFile("images/" + imageLocations[i]);
     }
@@ -226,13 +255,23 @@ void EventHandler(){
                 SDL_SetTextureColorMod(textures[i], 255, 255, 255);
             }
         }
+
+	if(ev.type == SDL_TEXTINPUT){
+	    inputText += ev.text.text;
+	}
+	if(ev.type == SDL_KEYDOWN){
+	    if(ev.key.keysym.sym == SDLK_BACKSPACE && !inputText.empty()){
+		    inputText.pop_back();
+	    }
+	}
     }
 }
 
 void RenderHandler(){
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_SetRenderDrawColor(renderer, 50, 50, 50, 255);
     SDL_RenderClear(renderer);
 
+    //Buttons
     SDL_RenderCopy(renderer, textures[0], NULL, &buttons[0]);
     SDL_RenderCopy(renderer, textures[1], NULL, &buttons[1]);
     if(pause){
@@ -244,6 +283,15 @@ void RenderHandler(){
     SDL_RenderCopy(renderer, textures[4], NULL, &buttons[3]);
     SDL_RenderCopy(renderer, textures[5], NULL, &buttons[4]);
     SDL_RenderCopy(renderer, textures[6], NULL, &buttons[5]);
+
+    //File Navigation
+    SDL_Rect rect = {2, 34, 188, 28};
+    SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
+    SDL_RenderFillRect(renderer, &rect);
+
+    rect = {5, 35, 0, 0};
+    SDL_SetRenderDrawColor(renderer, 10, 10, 10, 255);
+    SDL_RenderCopy(renderer, CreateText(font, inputText.c_str(), rect.w, rect.h, textColor), NULL, &rect);
 
     SDL_RenderPresent(renderer);
 }
@@ -257,6 +305,7 @@ int main(int argc, char *argv[]){
     }
 
     ma_device_uninit(&maDevice);
+    TTF_Quit();
     SDL_Quit();
     return 0;
 }
