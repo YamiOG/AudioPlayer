@@ -4,7 +4,9 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.7)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
-include_directories(extern/SDL2/include extern/SDL2_ttf extern/MiniAudio extern/stb/include)
+option(BOOST_HEADER_ONLY_ENABLE_TESTS FALSE)
+
+include_directories(extern/SDL2/include extern/SDL2_ttf extern/MiniAudio extern/stb/include extern)
 
 project(AudioPlayer)
 

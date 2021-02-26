@@ -10,7 +10,7 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 #find_package(SDL2 REQUIRED)
-find_package(Freetype REQUIRED)
+#find_package(Freetype REQUIRED)
 find_package(PkgConfig QUIET)
 
 set(SDL_TTF_MAJOR_VERSION 2)

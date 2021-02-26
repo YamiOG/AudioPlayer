@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <sstream> 
+#include <memory>
 #include <SDL.h>
 #include <SDL_ttf.h>
 #include <stb_image.h>
@@ -10,6 +11,8 @@
 
 #define MINIAUDIO_IMPLEMENTATION
 #include <miniaudio.h>
+
+//#include <boost/filesystem.hpp>
 
 using namespace std;
 
@@ -85,6 +88,7 @@ void DataCallback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint
                 ma_uint64 framesRead  = ma_decoder_read_pcm_frames(&maDecoders[songSelect], pOutput, frameCount);
                 if (framesRead < frameCount) {
                     decoderEnd[songSelect] = true;
+                    songSelect++;
                 }
             }
         }
@@ -132,18 +136,22 @@ SDL_Texture *GetTextureFromFile(string location){
 
 SDL_Texture *CreateText(TTF_Font *font, string text, int &w, int &h, SDL_Color color){
     if(text.empty()){
-	return nullptr;
+        return nullptr;
     }
+
     SDL_Surface *surface = TTF_RenderText_Solid(font, text.c_str(), color);
     if(surface == nullptr){
         printf("ERROR:Surface is null\n");
-	return nullptr; 
+        return nullptr; 
     }
 
     w = surface->w;
     h = surface->h;
 
-    return SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_Texture *t = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
+
+    return t;
 }
 
 int Setup(){
@@ -197,6 +205,12 @@ int Setup(){
 
 void EventHandler(){
     SDL_GetMouseState(&mousePos.x, &mousePos.y);
+    if(songSelect < 0){
+        songSelect = decoderCount-1;
+    }
+    if(songSelect >= decoderCount){
+        songSelect = 0;
+    }
     while(SDL_PollEvent(&ev)){
         if(ev.type == SDL_QUIT){
             running = false;
@@ -227,9 +241,6 @@ void EventHandler(){
                                 break;
                             case 1:
                                 songSelect--;
-                                if(songSelect < 0){
-                                    songSelect = decoderCount-1;
-                                }
                                 ma_decoder_seek_to_pcm_frame(&maDecoders[songSelect], 0);
                                 break;
                             case 2:
@@ -237,9 +248,6 @@ void EventHandler(){
                                 break;
                             case 3:
                                 songSelect++;
-                                if(songSelect >= decoderCount){
-                                    songSelect = 0;
-                                }
                                 ma_decoder_seek_to_pcm_frame(&maDecoders[songSelect], 0);
                                 break;
                             case 4:
@@ -274,7 +282,7 @@ void RenderHandler(){
     //Buttons
     SDL_RenderCopy(renderer, textures[0], NULL, &buttons[0]);
     SDL_RenderCopy(renderer, textures[1], NULL, &buttons[1]);
-    if(pause){
+    if(pPause){
         SDL_RenderCopy(renderer, textures[2], NULL, &buttons[2]);
     }
     else{
@@ -290,8 +298,11 @@ void RenderHandler(){
     SDL_RenderFillRect(renderer, &rect);
 
     rect = {5, 35, 0, 0};
-    SDL_SetRenderDrawColor(renderer, 10, 10, 10, 255);
-    SDL_RenderCopy(renderer, CreateText(font, inputText.c_str(), rect.w, rect.h, textColor), NULL, &rect);
+    SDL_Texture *inputText_Texture = CreateText(font, inputText.c_str(), rect.w, rect.h, textColor);
+    if(inputText_Texture){
+        SDL_RenderCopy(renderer, inputText_Texture, NULL, &rect);
+        SDL_DestroyTexture(inputText_Texture);
+    }
 
     SDL_RenderPresent(renderer);
 }
