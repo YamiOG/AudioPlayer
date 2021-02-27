@@ -2,11 +2,7 @@ add_subdirectory(extern)
 
 CMAKE_MINIMUM_REQUIRED(VERSION 3.7)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
-
-option(BOOST_HEADER_ONLY_ENABLE_TESTS FALSE)
-
-include_directories(extern/SDL2/include extern/SDL2_ttf extern/MiniAudio extern/stb/include extern)
+include_directories(extern/SDL2/include extern/SDL2_ttf extern/MiniAudio extern/stb/include)
 
 project(AudioPlayer)
 
@@ -14,4 +10,4 @@ file(GLOB EXTERN_SOURCES "${CMAKE_SOURCE_DIR}/extern/stb/include/*.h" "${CMAKE_S
 
 add_executable(AudioPlayer ${EXTERN_SOURCES} main.cpp)
 
-target_link_libraries(AudioPlayer PUBLIC SDL2 SDL2main PUBLIC SDL2_ttf)
+target_link_libraries(AudioPlayer PUBLIC SDL2 SDL2main PUBLIC SDL2_ttf PUBLIC ghcFilesystem::ghc_filesystem)

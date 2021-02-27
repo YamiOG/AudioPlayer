@@ -12,9 +12,13 @@
 #define MINIAUDIO_IMPLEMENTATION
 #include <miniaudio.h>
 
-//#include <boost/filesystem.hpp>
+#ifndef GHC_USE_STD_FS
+#include <ghc/filesystem.hpp>
+namespace fs = ghc::filesystem;
+#endif
 
 using namespace std;
+
 
 SDL_Window *window;
 SDL_Renderer* renderer;
@@ -96,6 +100,11 @@ void DataCallback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint
 }
 
 int GetDirectories(string path, vector<string> &list){
+    if(fs::exists(path)){
+        for (auto& p : fs::directory_iterator(path)){
+            list.push_back(p.path().filename().u8string());
+        }
+    }
     return 0;
 }
 
