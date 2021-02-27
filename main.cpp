@@ -19,7 +19,6 @@ namespace fs = ghc::filesystem;
 
 using namespace std;
 
-
 SDL_Window *window;
 SDL_Renderer* renderer;
 SDL_Event ev;
@@ -47,8 +46,6 @@ int decoderCount = 4;
 string fileLocations[] = {"Running in the 90's.mp3", "Undertale - Papyrus Theme Song - Bonetrousle.mp3", "Giorno's Theme Hardbass (JoRo Remix).mp3", "Bonetrousle (EAR RAPE WARNING).mp3"};
 ma_decoder* maDecoders = (ma_decoder*)malloc(sizeof(ma_decoder) * decoderCount);
 bool* decoderEnd = (bool*)malloc(sizeof(bool) * decoderCount);
-
-vector<string> aList;
 
 ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, ma_uint32 frameCount)
 {
@@ -118,7 +115,7 @@ TTF_Font *LoadFont(string font, int size){
 SDL_Texture *GetTextureFromFile(string location){
     int req_format = STBI_rgb_alpha;
     int width, height, orig_format;
-    unsigned char* data = stbi_load(location.c_str(), &width, &height, &orig_format, req_format); 
+    unsigned char* data = stbi_load(location.c_str(), &width, &height, &orig_format, req_format);
     if (data == NULL) {
         printf("ERROR:stb_image Failed to load file %s\n", location.c_str());
         return nullptr;
@@ -169,7 +166,7 @@ int Setup(){
     }
 
     if(TTF_Init() != 0){
-	return -1;
+        return -1;
     }
 
     window = SDL_CreateWindow("AudioPlayer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 192, 96, SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS);
@@ -208,7 +205,6 @@ int Setup(){
         printf("Failed to Start Miniaudio Device\n");
         return -1;
     }
-
     return 0;
 }
 
@@ -273,14 +269,14 @@ void EventHandler(){
             }
         }
 
-	if(ev.type == SDL_TEXTINPUT){
-	    inputText += ev.text.text;
-	}
-	if(ev.type == SDL_KEYDOWN){
-	    if(ev.key.keysym.sym == SDLK_BACKSPACE && !inputText.empty()){
-		    inputText.pop_back();
-	    }
-	}
+        if(ev.type == SDL_TEXTINPUT){
+            inputText += ev.text.text;
+        }
+        if(ev.type == SDL_KEYDOWN){
+            if(ev.key.keysym.sym == SDLK_BACKSPACE && !inputText.empty()){
+                inputText.pop_back();
+            }
+        }
     }
 }
 
@@ -313,17 +309,16 @@ void RenderHandler(){
         SDL_DestroyTexture(inputText_Texture);
     }
 
+
     SDL_RenderPresent(renderer);
 }
 
 int main(int argc, char *argv[]){
     Setup();
-    GetDirectories("../../", aList);
     while(running){
         EventHandler();
         RenderHandler();
     }
-
     ma_device_uninit(&maDevice);
     TTF_Quit();
     SDL_Quit();
