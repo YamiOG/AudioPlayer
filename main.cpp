@@ -1,5 +1,6 @@
 #include <stdio.h> 
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <vector>
 #include <sstream> 
@@ -35,6 +36,7 @@ string imageLocations[] = {"quit.png", "back.png", "pause.png", "play.png", "nex
 SDL_Texture *textures[7];
 
 string inputText;
+vector<string> dirList;
 
 bool running = true;
 bool pPause = false;
@@ -42,8 +44,9 @@ bool pPause = false;
 ma_device maDevice;
 ma_result maResult;
 
-int decoderCount = 4;
-string fileLocations[] = {"Running in the 90's.mp3", "Undertale - Papyrus Theme Song - Bonetrousle.mp3", "Giorno's Theme Hardbass (JoRo Remix).mp3", "Bonetrousle (EAR RAPE WARNING).mp3"};
+vector<string> fileLocations;
+
+int decoderCount = 50;
 ma_decoder* maDecoders = (ma_decoder*)malloc(sizeof(ma_decoder) * decoderCount);
 bool* decoderEnd = (bool*)malloc(sizeof(bool) * decoderCount);
 
@@ -89,7 +92,11 @@ void DataCallback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint
                 ma_uint64 framesRead  = ma_decoder_read_pcm_frames(&maDecoders[songSelect], pOutput, frameCount);
                 if (framesRead < frameCount) {
                     decoderEnd[songSelect] = true;
+
                     songSelect++;
+                    if(songSelect >= fileLocations.size()){
+                        songSelect = 0;
+                    }
                 }
             }
         }
@@ -97,6 +104,7 @@ void DataCallback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint
 }
 
 int GetDirectories(string path, vector<string> &list){
+    list.clear();
     if(fs::exists(path)){
         for (auto& p : fs::directory_iterator(path)){
             list.push_back(p.path().filename().u8string());
@@ -169,7 +177,7 @@ int Setup(){
         return -1;
     }
 
-    window = SDL_CreateWindow("AudioPlayer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 192, 96, SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS);
+    window = SDL_CreateWindow("AudioPlayer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 192, 192, SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS);
     renderer = SDL_CreateRenderer(window, -1, 0);
 
     font = LoadFont("font/Squarewave.ttf", 26);
@@ -177,8 +185,14 @@ int Setup(){
         textures[i] = GetTextureFromFile("images/" + imageLocations[i]);
     }
 
+    ifstream ReadFile("Songs.txt");
+    string line;
+    while(getline(ReadFile, line)){
+        fileLocations.push_back(line);
+    }
+
     ma_decoder_config maDecoderConfig = ma_decoder_config_init(ma_format_f32, 2, 48000);
-    for(int i = 0; i < decoderCount; i++){
+    for(int i = 0; i < fileLocations.size(); i++){
         maResult = ma_decoder_init_file(fileLocations[i].c_str(), &maDecoderConfig, &maDecoders[i]);
         maDecoders[i].pUserData = (void*)fileLocations[i].c_str(); 
         if(maResult != MA_SUCCESS){
@@ -210,16 +224,14 @@ int Setup(){
 
 void EventHandler(){
     SDL_GetMouseState(&mousePos.x, &mousePos.y);
-    if(songSelect < 0){
-        songSelect = decoderCount-1;
-    }
-    if(songSelect >= decoderCount){
-        songSelect = 0;
-    }
+
+    GetDirectories(inputText, dirList);
+
     while(SDL_PollEvent(&ev)){
         if(ev.type == SDL_QUIT){
             running = false;
         }
+
         if(ev.type == SDL_MOUSEBUTTONDOWN){
             if(ev.button.button == SDL_BUTTON_LEFT){
                 for(int i = 0; i < 6; i++){
@@ -246,6 +258,9 @@ void EventHandler(){
                                 break;
                             case 1:
                                 songSelect--;
+                                if(songSelect < 0){
+                                    songSelect = (int)fileLocations.size()-1;
+                                }
                                 ma_decoder_seek_to_pcm_frame(&maDecoders[songSelect], 0);
                                 break;
                             case 2:
@@ -253,6 +268,9 @@ void EventHandler(){
                                 break;
                             case 3:
                                 songSelect++;
+                                if(songSelect >= fileLocations.size()){
+                                    songSelect = 0;
+                                }
                                 ma_decoder_seek_to_pcm_frame(&maDecoders[songSelect], 0);
                                 break;
                             case 4:
@@ -275,6 +293,10 @@ void EventHandler(){
         if(ev.type == SDL_KEYDOWN){
             if(ev.key.keysym.sym == SDLK_BACKSPACE && !inputText.empty()){
                 inputText.pop_back();
+            }
+            if(ev.key.keysym.sym == SDLK_RETURN){
+                ofstream WriteFile("Songs.txt");
+                WriteFile << inputText + '\n';
             }
         }
     }
@@ -299,16 +321,45 @@ void RenderHandler(){
 
     //File Navigation
     SDL_Rect rect = {2, 34, 188, 28};
+    SDL_Rect crop;
+
     SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
     SDL_RenderFillRect(renderer, &rect);
 
-    rect = {5, 35, 0, 0};
+    //Input Text
+    rect = {4, 36, 0, 0};
     SDL_Texture *inputText_Texture = CreateText(font, inputText.c_str(), rect.w, rect.h, textColor);
+    crop = {0, 0, rect.w, rect.h};
+    if(rect.w > 170){
+        crop.x = rect.w-170;
+        crop.w = 170;
+        rect.w = 170;
+    }
+
     if(inputText_Texture){
-        SDL_RenderCopy(renderer, inputText_Texture, NULL, &rect);
+        SDL_RenderCopy(renderer, inputText_Texture, &crop, &rect);
         SDL_DestroyTexture(inputText_Texture);
     }
 
+    size_t size = dirList.size();
+    if(dirList.size() > 3){
+        size = 3;
+    }
+
+    SDL_Rect dirRect = { 0, 0, 0, 0 };
+    for(int i = 0; i < size; i++){
+        dirRect = {4, 36 + 28*(i+1), dirRect.w, dirRect.h};
+        SDL_Texture *dirText_Texture = CreateText(font, dirList[i].c_str(), dirRect.w, dirRect.h, textColor);
+        rect = {2, 34 + 28*(i+1), dirRect.w+4, 28};
+
+        SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
+        SDL_RenderFillRect(renderer, &rect);
+
+        if(dirText_Texture){
+            SDL_RenderCopy(renderer, dirText_Texture, NULL, &dirRect);
+            SDL_DestroyTexture(dirText_Texture);
+        }
+    }
 
     SDL_RenderPresent(renderer);
 }
