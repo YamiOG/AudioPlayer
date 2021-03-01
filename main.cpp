@@ -106,9 +106,12 @@ void DataCallback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint
 int GetDirectories(string path, vector<string> &list){
     list.clear();
     if(fs::exists(path)){
-        for (auto& p : fs::directory_iterator(path)){
-            list.push_back(p.path().filename().u8string());
+        try{
+            for (auto& p : fs::directory_iterator(path)){
+                list.push_back(p.path().filename().u8string());
+            }
         }
+        catch (fs::filesystem_error) {}
     }
     return 0;
 }
@@ -350,7 +353,7 @@ void RenderHandler(){
     for(int i = 0; i < size; i++){
         dirRect = {4, 36 + 28*(i+1), dirRect.w, dirRect.h};
         SDL_Texture *dirText_Texture = CreateText(font, dirList[i].c_str(), dirRect.w, dirRect.h, textColor);
-        rect = {2, 34 + 28*(i+1), dirRect.w+4, 28};
+        rect = {2, 134 + 28*(i+1), dirRect.w+4, 28};
 
         SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
         SDL_RenderFillRect(renderer, &rect);
