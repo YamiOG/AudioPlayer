@@ -1,5 +1,6 @@
 #include <stdio.h> 
 #include <iostream>
+#include <algorithm>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -50,69 +51,51 @@ int decoderCount = 50;
 ma_decoder* maDecoders = (ma_decoder*)malloc(sizeof(ma_decoder) * decoderCount);
 bool* decoderEnd = (bool*)malloc(sizeof(bool) * decoderCount);
 
-ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, ma_uint32 frameCount)
-{
-    float temp[4096];
-    ma_uint32 tempCapInFrames = ma_countof(temp) / 2;
-    ma_uint32 totalFramesRead = 0;
-
-    while (totalFramesRead < frameCount) {
-        ma_uint32 iSample;
-        ma_uint32 framesReadThisIteration;
-        ma_uint32 totalFramesRemaining = frameCount - totalFramesRead;
-        ma_uint32 framesToReadThisIteration = tempCapInFrames;
-        if (framesToReadThisIteration > totalFramesRemaining) {
-            framesToReadThisIteration = totalFramesRemaining;
-        }
-
-        framesReadThisIteration = (ma_uint32)ma_decoder_read_pcm_frames(pDecoder, temp, framesToReadThisIteration);
-        if (framesReadThisIteration == 0) {
-            break;
-        }
-
-        /* Mix the frames together. */
-        for (iSample = 0; iSample < framesReadThisIteration*2; ++iSample) {
-            pOutputF32[totalFramesRead*2 + iSample] += temp[iSample];
-        }
-
-        totalFramesRead += framesReadThisIteration;
-
-        if (framesReadThisIteration < framesToReadThisIteration) {
-            break;  /* Reached EOF. */
-        }
-    }
-    
-    return totalFramesRead;
-}
-
 void DataCallback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount){
     float* pOutputF32 = (float*)pOutput;
-        if(!pPause){
-            if (!decoderEnd[songSelect]) {
-                ma_uint64 framesRead  = ma_decoder_read_pcm_frames(&maDecoders[songSelect], pOutput, frameCount);
-                if (framesRead < frameCount) {
-                    decoderEnd[songSelect] = true;
+    if(!pPause){
+        if (!decoderEnd[songSelect]) {
+            ma_uint64 framesRead  = ma_decoder_read_pcm_frames(&maDecoders[songSelect], pOutput, frameCount);
+            if (framesRead < frameCount) {
+                decoderEnd[songSelect] = true;
 
-                    songSelect++;
-                    if(songSelect >= fileLocations.size()){
-                        songSelect = 0;
-                    }
+                songSelect++;
+                if(songSelect >= fileLocations.size()){
+                    songSelect = 0;
                 }
             }
         }
+    }
     (void)pInput;
+}
+
+string GetPathEnd(string path){
+    size_t pos = max((int)max((int)path.find_last_of("/"), (int)path.find_last_of("\\")), (int)path.find_last_of("."));
+    if(pos == string::npos){
+        pos = -1; 
+    }
+    return path.substr(pos+1,path.size());
 }
 
 int GetDirectories(string path, vector<string> &list){
     list.clear();
-    if(fs::exists(path)){
-        try{
-            for (auto& p : fs::directory_iterator(path)){
-                list.push_back(p.path().filename().u8string());
-            }
-        }
-        catch (fs::filesystem_error) {}
+
+    size_t pos = max((int)max((int)path.find_last_of("/"), (int)path.find_last_of("\\")), (int)path.find_last_of("."));
+    if(pos == string::npos){
+        pos = -1; 
     }
+
+    path = path.substr(0, pos+1);
+    if(!fs::exists(path)){
+        path = fs::current_path().u8string();
+    }
+
+    try{
+        for (auto& p : fs::directory_iterator(path)){
+            list.push_back(p.path().filename().u8string());
+        }
+    }
+    catch (fs::filesystem_error) {}
     return 0;
 }
 
@@ -300,6 +283,7 @@ void EventHandler(){
             if(ev.key.keysym.sym == SDLK_RETURN){
                 ofstream WriteFile("Songs.txt");
                 WriteFile << inputText + '\n';
+                inputText.clear();
             }
         }
     }
@@ -344,16 +328,31 @@ void RenderHandler(){
         SDL_DestroyTexture(inputText_Texture);
     }
 
-    size_t size = dirList.size();
-    if(dirList.size() > 3){
+    string search = GetPathEnd(inputText);
+    vector<string> results;
+
+    if(!search.empty()){
+        for(int i = 0; i < dirList.size(); i++){
+            size_t found = dirList[i].rfind(search);
+            if(found != string::npos){
+                results.push_back(dirList[i]);
+            }
+        }
+    }
+    else{
+        results = dirList;
+    }
+
+    size_t size = results.size();
+    if(results.size() > 3){
         size = 3;
     }
 
     SDL_Rect dirRect = { 0, 0, 0, 0 };
     for(int i = 0; i < size; i++){
         dirRect = {4, 36 + 28*(i+1), dirRect.w, dirRect.h};
-        SDL_Texture *dirText_Texture = CreateText(font, dirList[i].c_str(), dirRect.w, dirRect.h, textColor);
-        rect = {2, 134 + 28*(i+1), dirRect.w+4, 28};
+        SDL_Texture *dirText_Texture = CreateText(font, results[i].c_str(), dirRect.w, dirRect.h, textColor);
+        rect = {2, 34 + 28*(i+1), dirRect.w+4, 28};
 
         SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
         SDL_RenderFillRect(renderer, &rect);
