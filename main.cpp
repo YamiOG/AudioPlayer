@@ -218,51 +218,48 @@ void EventHandler(){
             running = false;
         }
 
-        if(ev.type == SDL_MOUSEBUTTONDOWN){
-            if(ev.button.button == SDL_BUTTON_LEFT){
-                for(int i = 0; i < 6; i++){
-                    if(buttons[i].x < mousePos.x && buttons[i].x+buttons[i].w > mousePos.x && buttons[i].y < mousePos.y && buttons[i].y + buttons[i].h > mousePos.y){
-
-                        if(i < 2){
-                            SDL_SetTextureColorMod(textures[i], 100, 100, 100);
-                        }
-                        else if(i < 3){
-                            if(pPause){
-                                SDL_SetTextureColorMod(textures[i+1], 100, 100, 100);
-                            }
-                            else{
-                                SDL_SetTextureColorMod(textures[i], 100, 100, 100);
-                            }
-                        }
-                        else{
+        if(ev.type == SDL_MOUSEBUTTONDOWN && ev.button.button == SDL_BUTTON_LEFT){
+            for(int i = 0; i < 6; i++){
+                if(buttons[i].x < mousePos.x && buttons[i].x+buttons[i].w > mousePos.x && buttons[i].y < mousePos.y && buttons[i].y + buttons[i].h > mousePos.y){
+                    if(i < 2){
+                        SDL_SetTextureColorMod(textures[i], 100, 100, 100);
+                    }
+                    else if(i < 3){
+                        if(pPause){
                             SDL_SetTextureColorMod(textures[i+1], 100, 100, 100);
                         }
-
-                        switch(i){
-                            case 0:
-                                running = false;
-                                break;
-                            case 1:
-                                songSelect--;
-                                if(songSelect < 0){
-                                    songSelect = (int)fileLocations.size()-1;
-                                }
-                                ma_decoder_seek_to_pcm_frame(&maDecoders[songSelect], 0);
-                                break;
-                            case 2:
-                                pPause = !pPause;
-                                break;
-                            case 3:
-                                songSelect++;
-                                if(songSelect >= fileLocations.size()){
-                                    songSelect = 0;
-                                }
-                                ma_decoder_seek_to_pcm_frame(&maDecoders[songSelect], 0);
-                                break;
-                            case 4:
-                                ma_decoder_seek_to_pcm_frame(&maDecoders[songSelect], 0);
-                                break;
+                        else{
+                            SDL_SetTextureColorMod(textures[i], 100, 100, 100);
                         }
+                    }
+                    else{
+                        SDL_SetTextureColorMod(textures[i+1], 100, 100, 100);
+                    }
+
+                    switch(i){
+                    case 0:
+                        running = false;
+                        break;
+                    case 1:
+                        songSelect--;
+                        if(songSelect < 0){
+                            songSelect = (int)fileLocations.size()-1;
+                        }
+                        ma_decoder_seek_to_pcm_frame(&maDecoders[songSelect], 0);
+                        break;
+                    case 2:
+                        pPause = !pPause;
+                        break;
+                    case 3:
+                        songSelect++;
+                        if(songSelect >= fileLocations.size()){
+                            songSelect = 0;
+                        }
+                        ma_decoder_seek_to_pcm_frame(&maDecoders[songSelect], 0);
+                        break;
+                    case 4:
+                        ma_decoder_seek_to_pcm_frame(&maDecoders[songSelect], 0);
+                        break;
                     }
                 }
             }
@@ -348,17 +345,17 @@ void RenderHandler(){
         size = 3;
     }
 
-    SDL_Rect dirRect = { 0, 0, 0, 0 };
+    SDL_Rect dirTextRect = { 0, 0, 0, 0 };
     for(int i = 0; i < size; i++){
-        dirRect = {4, 36 + 28*(i+1), dirRect.w, dirRect.h};
-        SDL_Texture *dirText_Texture = CreateText(font, results[i].c_str(), dirRect.w, dirRect.h, textColor);
-        rect = {2, 34 + 28*(i+1), dirRect.w+4, 28};
-
+        dirTextRect = {4, 36 + 28*(i+1), dirTextRect.w, dirTextRect.h};
+        SDL_Texture *dirText_Texture = CreateText(font, results[i].c_str(), dirTextRect.w, dirTextRect.h, textColor);
+        
+        SDL_Rect dirBoxRect = {2, 34 + 28*(i+1), dirTextRect.w+4, 28};
         SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
-        SDL_RenderFillRect(renderer, &rect);
+        SDL_RenderFillRect(renderer, &dirBoxRect);
 
         if(dirText_Texture){
-            SDL_RenderCopy(renderer, dirText_Texture, NULL, &dirRect);
+            SDL_RenderCopy(renderer, dirText_Texture, NULL, &dirTextRect);
             SDL_DestroyTexture(dirText_Texture);
         }
     }
