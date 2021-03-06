@@ -281,7 +281,7 @@ void EventHandler(){
                 inputText.pop_back();
             }
             if(ev.key.keysym.sym == SDLK_RETURN){
-                ofstream WriteFile("Songs.txt");
+                ofstream WriteFile("Songs.txt", ios::app);
                 WriteFile << inputText + '\n';
                 inputText.clear();
             }
